@@ -1,1 +1,1 @@
-"""News category scrapers."""
+"""News feed collection adapters."""

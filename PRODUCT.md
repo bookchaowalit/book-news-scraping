@@ -2,7 +2,7 @@
 
 **Slug:** `bookchaowalit/book-news-scraping`  
 **Generated:** 2026-08-11 (bulk Book Dev closeout)  
-**Status:** starter / portfolio boundary
+**Status:** collection adapters present; scheduler still runs from `book-job-scraping`
 
 ## Purpose
 
@@ -13,6 +13,16 @@ system.
 ## Runnable path
 
 See `README.md` for install and run instructions when present.
+
+## Current adapters
+
+- `news/matichon_scraper.py`
+- `news/thai_business_scraper.py`
+- `news/thai_tech_scraper.py`
+- `news/notebookspec_scraper.py`
+
+Tests live under `tests/`. Runtime collection remains scheduled by
+`book-job-scraping` until this repository has its own cron.
 
 ## Limits
 

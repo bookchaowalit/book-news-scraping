@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Capture Matichon Online articles from its public RSS feed.
+"""Capture NotebookSpec articles from its public RSS feed.
 
-The RSS feed is the preferred acquisition channel for this source. This repo
-only produces a bounded, validated capture; durable news lake/API ownership
-belongs to the downstream data product.
+This is a dedicated news adapter. Do not reuse ecommerce/Shopee modules for
+this source. Durable news lake/API ownership belongs downstream.
 """
 
 from __future__ import annotations
@@ -14,22 +13,23 @@ import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 try:
     import feedparser
     import httpx
     from bs4 import BeautifulSoup
-except ImportError as exc:  # pragma: no cover - requirements.txt supplies dependencies
-    raise RuntimeError("feedparser, httpx, and beautifulsoup4 are required for Matichon capture") from exc
+except ImportError as exc:  # pragma: no cover
+    raise RuntimeError("feedparser, httpx, and beautifulsoup4 are required for NotebookSpec capture") from exc
 
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "data" / "exported"
-FEED_URL = "https://www.matichon.co.th/feed"
+FEED_URL = "https://notebookspec.com/web/feed"
+SOURCE_NAME = "Notebookspec"
 MAX_ENTRIES = 100
-ALLOWED_HOST = re.compile(r"(?:[a-z0-9-]+\.)*matichon\.co\.th", re.IGNORECASE)
+ALLOWED_HOST = re.compile(r"(?:[a-z0-9-]+\.)*notebookspec\.com", re.IGNORECASE)
 SNAPSHOT_FIELDS = [
     "captured_at",
     "article_id",
@@ -53,26 +53,23 @@ def _utc_now() -> str:
 
 
 def canonical_url(value: str) -> str:
-    """Normalize and keep only HTTPS Matichon article URLs."""
-
     parts = urlsplit(str(value).strip())
     host = (parts.hostname or "").lower()
     if parts.scheme.lower() != "https" or not ALLOWED_HOST.fullmatch(host):
-        raise ValueError("Matichon article URL must use an HTTPS matichon.co.th host")
+        raise ValueError("NotebookSpec article URL must use an HTTPS notebookspec.com host")
     path = parts.path.rstrip("/") or "/"
     return urlunsplit(("https", host, path, "", ""))
 
 
 def normalize_feed_url(value: str) -> str:
     url = canonical_url(value)
-    if not url.rstrip("/").endswith("/feed"):
-        raise ValueError("Matichon feed URL must end with /feed")
-    return url
+    if not url.rstrip("/").endswith("/web/feed"):
+        raise ValueError("NotebookSpec feed URL must end with /web/feed")
+    return url.rstrip("/")
 
 
 def _clean_text(value: Any, limit: int) -> str:
-    text = str(value or "")
-    text = html_lib.unescape(text)
+    text = html_lib.unescape(str(value or ""))
     if "<" in text or ">" in text:
         text = BeautifulSoup(text, "html.parser").get_text(" ", strip=True)
     return re.sub(r"\s+", " ", text).strip()[:limit]
@@ -123,15 +120,13 @@ def _categories(entry: Any) -> str:
 
 
 def parse_feed(raw: bytes | str, feed_url: str = FEED_URL, limit: int = 50) -> tuple[Any, list[dict[str, Any]]]:
-    """Parse RSS entries, dropping entries without trustworthy attribution."""
-
     normalized_feed_url = normalize_feed_url(feed_url)
     parsed = feedparser.parse(raw)
     if not parsed.entries:
-        raise ValueError("Matichon RSS feed contains no entries")
+        raise ValueError("NotebookSpec RSS feed contains no entries")
     feed_title = _clean_text(parsed.feed.get("title"), 200)
     if not feed_title:
-        raise ValueError("Matichon RSS feed title is missing")
+        raise ValueError("NotebookSpec RSS feed title is missing")
 
     rows: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
@@ -149,9 +144,7 @@ def parse_feed(raw: bytes | str, feed_url: str = FEED_URL, limit: int = 50) -> t
         published_at = _published_at(entry)
         if not published_at:
             continue
-        article_id = _clean_text(entry.get("id") or url, 300)
-        if not article_id:
-            article_id = url
+        article_id = _clean_text(entry.get("id") or url, 300) or url
         rows.append(
             {
                 "article_id": article_id,
@@ -163,7 +156,7 @@ def parse_feed(raw: bytes | str, feed_url: str = FEED_URL, limit: int = 50) -> t
                 "published_at": published_at,
                 "updated_at": _published_at({"updated": entry.get("updated")}),
                 "image_url": _image_url(entry),
-                "source": "Matichon",
+                "source": SOURCE_NAME,
                 "source_url": normalized_feed_url,
                 "feed_title": feed_title,
             }
@@ -172,7 +165,7 @@ def parse_feed(raw: bytes | str, feed_url: str = FEED_URL, limit: int = 50) -> t
         if len(rows) >= limit:
             break
     if not rows:
-        raise ValueError("Matichon RSS feed contains no contract-compliant entries")
+        raise ValueError("NotebookSpec RSS feed contains no contract-compliant entries")
     return parsed, rows
 
 
@@ -188,20 +181,20 @@ def fetch_feed(feed_url: str) -> bytes:
     )
     response.raise_for_status()
     if not response.content:
-        raise ValueError("Matichon RSS response is empty")
+        raise ValueError("NotebookSpec RSS response is empty")
     return response.content
 
 
 def write_raw(raw: bytes, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    path = output_dir / "matichon_news_raw.xml"
+    path = output_dir / "notebookspec_tech_raw.xml"
     path.write_bytes(raw)
     return path
 
 
 def write_snapshot(rows: list[dict[str, Any]], captured_at: str, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    path = output_dir / "matichon_news.csv"
+    path = output_dir / "notebookspec_tech.csv"
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=SNAPSHOT_FIELDS, extrasaction="ignore")
         writer.writeheader()
@@ -212,7 +205,7 @@ def write_snapshot(rows: list[dict[str, Any]], captured_at: str, output_dir: Pat
 
 def append_history(rows: list[dict[str, Any]], captured_at: str, output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
-    path = output_dir / "matichon_news_history.csv"
+    path = output_dir / "notebookspec_tech_history.csv"
     exists = path.exists()
     with path.open("a", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=HISTORY_FIELDS, extrasaction="ignore")
@@ -223,8 +216,8 @@ def append_history(rows: list[dict[str, Any]], captured_at: str, output_dir: Pat
     return path
 
 
-class MatichonScraper:
-    """Scheduler adapter for bounded Matichon RSS capture."""
+class NotebookspecScraper:
+    """Scheduler adapter for bounded NotebookSpec RSS capture."""
 
     def __init__(
         self,
@@ -246,10 +239,10 @@ class MatichonScraper:
         raw_path = write_raw(raw, self.output_dir)
         snapshot_path = write_snapshot(rows, captured_at, self.output_dir)
         history_path = append_history(rows, captured_at, self.output_dir)
-        print(f"[matichon_news] {len(rows)} articles -> {snapshot_path}")
+        print(f"[notebookspec_tech] {len(rows)} articles -> {snapshot_path}")
         return [
             {
-                "source": "matichon_news",
+                "source": "notebookspec_tech",
                 "count": len(rows),
                 "output": str(snapshot_path),
                 "history": str(history_path),
@@ -261,4 +254,4 @@ class MatichonScraper:
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(MatichonScraper().run())
+    asyncio.run(NotebookspecScraper().run())
