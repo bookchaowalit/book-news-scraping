@@ -18,12 +18,16 @@ Python
 ## How to run (local)
 
 ```bash
-# From this repository root
 python3 -m venv .venv && source .venv/bin/activate
-# Install whatever deps the script imports (often requests/httpx/bs4).
-# Prefer reading the scraper module docstring/imports first — no lockfile yet.
-python3 news/matichon_scraper.py
+pip install -r requirements.txt
+python3 scripts/run_feeds.py --limit 20
+bash setup_cron.sh install   # optional; every 2 hours
+bash setup_cron.sh status
 ```
+
+Adapters: Matichon, Bangkok Post Business, Blognone, NotebookSpec.
+Output stays in this repository's `data/exported/`. The book-job-scraping
+scheduler may still collect the same feeds as a compatibility runner.
 
 ## Boundaries
 

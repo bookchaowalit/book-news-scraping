@@ -2,7 +2,7 @@
 
 **Slug:** `bookchaowalit/book-news-scraping`  
 **Generated:** 2026-08-11 (bulk Book Dev closeout)  
-**Status:** collection adapters present; scheduler still runs from `book-job-scraping`
+**Status:** collection adapters present; this repo can schedule RSS feeds via `setup_cron.sh`
 
 ## Purpose
 
