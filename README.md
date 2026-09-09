@@ -29,15 +29,31 @@ Adapters: Matichon, Bangkok Post Business, Blognone, NotebookSpec.
 Output stays in this repository's `data/exported/`. The book-job-scraping
 scheduler may still collect the same feeds as a compatibility runner.
 
+The approved captures can be replayed into the shared Bronze lake with the
+parent operator command:
+
+```bash
+task scraping:ingest -- --product news
+task scraping:stack -- --require-job-readiness
+```
+
+The read-only `news.v1` API listens on `127.0.0.1:8108` and serves committed
+Bronze data only. Consumers must use `GET /v1/records` (or `/v1/history`) and
+preserve publisher attribution; they must not read these CSVs directly.
+
 ## Boundaries
 
-- **Not** a lake-first data product. Durable market datasets live under `book-*-data` repos.
-- **Not** coupled to Solo Empire monorepo runtime. Nested Git repo; commit only inside this tree.
+- **Lake/API boundary:** capture remains owned here; the parent operator owns
+  replay orchestration and the shared lake runtime, while this repository owns
+  the `news.v1` read-only delivery adapter.
+- **Not** coupled to upstream consumer apps. Nested Git repo; commit only inside this tree.
 - Never commit `.env`, cookies, session dumps, or scraped PII dumps to Git.
 
 ## Limitations (honest)
 
-Publishers may disallow automated access. No republishing pipeline. Not connected to a lake product yet.
+Publishers may disallow automated access. Only publisher-provided RSS/Atom
+captures with canonical URLs and attribution are approved. The API does not
+republish article bodies or trigger collection from a read request.
 
 ## Related
 

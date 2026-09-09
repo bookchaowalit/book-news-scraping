@@ -2,7 +2,8 @@
 
 **Slug:** `bookchaowalit/book-news-scraping`  
 **Generated:** 2026-08-11 (bulk Book Dev closeout)  
-**Status:** collection adapters present; this repo can schedule RSS feeds via `setup_cron.sh`
+**Status:** collection adapters plus a Bronze-backed `news.v1` read-only API;
+this repo can schedule RSS feeds via `setup_cron.sh`
 
 ## Purpose
 
@@ -23,6 +24,10 @@ See `README.md` for install and run instructions when present.
 
 Tests live under `tests/`. Runtime collection remains scheduled by
 `book-job-scraping` until this repository has its own cron.
+
+The parent operator replays approved CSV captures into the shared Bronze lake.
+`news_data.api` serves the committed lake projection on `127.0.0.1:8108`; it
+does not call publishers and does not republish article bodies.
 
 ## Limits
 
