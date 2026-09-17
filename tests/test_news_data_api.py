@@ -46,3 +46,21 @@ class NewsDataApiTests(unittest.TestCase):
             self.assertIn(path, text)
         self.assertIn('data_status="forbidden"', text)
         self.assertFalse(config.ALLOW_REFRESH)
+
+    def test_history_deduplicates_replays_but_keeps_new_observation_times(self) -> None:
+        base = {
+            "source": "Matichon",
+            "article_id": "article-001",
+            "source_record_id": "Matichon|article-001",
+            "canonical_url": "https://publisher.example/news/article-001",
+            "headline": "Example headline",
+            "event_time": "2026-09-08T00:00:00Z",
+            "updated_at": "2026-09-08T00:00:00Z",
+            "ingest_run_id": "run-001",
+            "raw_object_key": "landing/batch-001/payload.csv",
+        }
+        duplicate = {**base, "ingest_run_id": "run-002", "raw_object_key": "landing/batch-002/payload.csv"}
+        later = {**base, "event_time": "2026-09-08T01:00:00Z", "updated_at": "2026-09-08T01:00:00Z"}
+        items = store.deduplicate_history_items([base, duplicate, later])
+        self.assertEqual(len(items), 2)
+        self.assertEqual([item["record_id"] for item in items], ["Matichon|article-001#h0", "Matichon|article-001#h1"])

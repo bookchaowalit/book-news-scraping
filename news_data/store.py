@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -94,6 +95,37 @@ def news_item_from_bronze(
     return item
 
 
+def _history_observation_key(item: dict[str, Any]) -> str:
+    """Identify one source observation while ignoring physical lake lineage."""
+    physical_fields = {"record_id", "ingest_run_id", "raw_object_key"}
+    payload = {
+        key: value for key, value in item.items() if key not in physical_fields
+    }
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+
+
+def deduplicate_history_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop exact replay duplicates but retain observations from new captures.
+
+    Cumulative history CSVs can be replayed by an older operator command.  The
+    source identity and event timestamp remain part of the key, so the same
+    article observed at a later capture time is still a distinct history row.
+    Physical batch identifiers are excluded because a replay creates a new
+    immutable landing/Bronze batch for the same source observation.
+    """
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
+    for item in items:
+        key = _history_observation_key(item)
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized = dict(item)
+        normalized["record_id"] = make_record_id(normalized) + f"#h{len(unique)}"
+        unique.append(normalized)
+    return unique
+
+
 def load_records(*, data_lake_uri: Optional[str] = None) -> dict[str, Any]:
     return _ps_mod().load_bronze_dataset(
         _contract(),
@@ -110,7 +142,7 @@ def load_records(*, data_lake_uri: Optional[str] = None) -> dict[str, Any]:
 
 
 def load_history(*, data_lake_uri: Optional[str] = None) -> dict[str, Any]:
-    return _ps_mod().load_bronze_dataset(
+    result = _ps_mod().load_bronze_dataset(
         _contract(),
         config.LAKE_DATASET_HISTORY,
         data_lake_uri=data_lake_uri or _lake_uri(),
@@ -122,6 +154,10 @@ def load_history(*, data_lake_uri: Optional[str] = None) -> dict[str, Any]:
         read_mode=config.LAKE_READ_MODE,
         read_fallback=config.LAKE_READ_FALLBACK,
     )
+    items = result.get("items")
+    if isinstance(items, list):
+        result["items"] = deduplicate_history_items(items)
+    return result
 
 
 def get_record(record_id: str, *, data_lake_uri: Optional[str] = None) -> Optional[dict[str, Any]]:
@@ -153,4 +189,3 @@ def envelope(
         retrieved_at=retrieved_at,
         extra=extra,
     )
-
