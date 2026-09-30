@@ -64,3 +64,6 @@ code left; `updated_at` is now truthful.
   plain-HTTP / lookalike-host drops, WordPress author/topics/guid, feed-URL
   policy, writers, roster selection. 28 -> 36 passed; ruff 0.15.8 and
   0.16.9 clean.
+- Refresh auth: `/v1/refresh` compares the bearer token with `hmac.compare_digest`
+  (`_refresh_token_ok`) instead of `==`, which leaked the matching prefix
+  length through timing; `tests/test_refresh_token_compare.py` pins it.

@@ -6,6 +6,7 @@ never imports the collector or contacts a publisher during a GET request.
 
 from __future__ import annotations
 
+import hmac
 import json
 import re
 import sys
@@ -58,6 +59,18 @@ def _query_int(qs: dict[str, list[str]], name: str, default: int) -> int:
         return int(qs.get(name, [str(default)])[0])
     except (TypeError, ValueError):
         return default
+
+
+def _refresh_token_ok(token: str) -> bool:
+    """Constant-time comparison of a bearer token with ``REFRESH_TOKEN``.
+
+    ``==`` returns at the first differing character, which leaks how much of
+    the secret a guess got right through response timing.
+    """
+    expected = config.REFRESH_TOKEN or ""
+    if not expected or not token:
+        return False
+    return hmac.compare_digest(token.encode("utf-8"), expected.encode("utf-8"))
 
 
 class DataProductHandler(BaseHTTPRequestHandler):
@@ -231,7 +244,7 @@ class DataProductHandler(BaseHTTPRequestHandler):
         # by default and never triggers a publisher request from this handler.
         auth = self.headers.get("Authorization", "")
         token = auth.split(" ", 1)[1].strip() if auth.lower().startswith("bearer ") else ""
-        allowed = config.ALLOW_REFRESH and bool(config.REFRESH_TOKEN) and token == config.REFRESH_TOKEN
+        allowed = config.ALLOW_REFRESH and bool(config.REFRESH_TOKEN) and _refresh_token_ok(token)
         if not allowed:
             return _json_response(
                 self,
