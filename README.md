@@ -5,11 +5,12 @@
 
 ## Purpose
 
-Thai news headline/article fetch prototypes (Matichon and generic Thai news modules).
+Bounded capture of Thai news from public RSS/Atom feeds (Matichon, NotebookSpec,
+Bangkok Post Business, Blognone) plus a read-only `news.v1` data API.
 
 ## Entry points
 
-- `news/matichon_scraper.py, news/thai_news_scraper.py`
+- `scripts/run_feeds.py` -> `news/{matichon,notebookspec,thai_business,thai_tech}_scraper.py` (shared helpers in `news/feed_common.py`)
 
 ## Stack
 
@@ -85,9 +86,16 @@ connection errors, HTTP 429 (honouring `Retry-After`, capped at 60 s) and 5xx.
 feed is reported as `{"source": ..., "error": "<ExceptionClass>"}` (no payload
 text) while the others still run, and the exit code is 1 if any feed failed.
 
-`news/thai_news_scraper.py` is a legacy module that imports the old monorepo
-`adapters`/`core` packages; it is not used by `run_feeds.py` and does not run
-from a standalone checkout.
+Text cleaning, date parsing and CSV writing are shared in `news/feed_common.py`.
+`updated_at` is the entry's own update time and is empty when a feed has none
+(feedparser's deprecated `updated` -> `published` fallback is not used; pytest
+turns that DeprecationWarning into an error).
+
+The former `news/thai_news_scraper.py` was removed in the 2026-09 upgrade pass:
+it imported the retired monorepo `adapters`/`core` packages and never ran from a
+standalone checkout. Bangkok Post Business is covered by
+`thai_business_scraper.py`; its other feeds (Bangkok Post Tech, Techsauce,
+Thaiger, TechCrunch) are listed in `docs/UPGRADE-PLAN.md` as candidates.
 
 ## Checks (offline)
 

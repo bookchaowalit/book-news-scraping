@@ -2,10 +2,10 @@
 
 ## Current state
 
-Score: **7/10** (was 5/10) — four fixture-tested RSS adapters plus the
-`news.v1` read-only API; now with shared polite fetching, per-feed failure
-isolation, lint, and offline CI. Remaining gaps are the legacy module and
-duplicated adapter code.
+Score: **7.5/10** (pass 1: 5 -> 7; pass 2: 7 -> 7.5) — four fixture-tested
+RSS adapters on one shared helper module plus the `news.v1` read-only API,
+polite fetching, per-feed failure isolation, lint, and offline CI. No legacy
+code left; `updated_at` is now truthful.
 
 ## Backlog
 
@@ -13,22 +13,18 @@ duplicated adapter code.
 - (none open)
 
 ### P1
-- Collapse the four near-identical adapters (`canonical_url`, `_clean_text`,
-  `_published_at`, CSV writers) into one shared module with per-feed config;
-  keep the fixture tests as the regression net.
-- Resolve the feedparser `updated`→`published` DeprecationWarning: read
-  `entry.get("updated_parsed")`/raw `updated` explicitly so `updated_at` does
-  not silently fall back to `published_at`.
-- Delete or port `news/thai_news_scraper.py` (depends on missing monorepo
-  `adapters`/`core` packages).
+- Finish the collapse: `parse_feed`/scraper classes are still per-adapter
+  copies; a per-feed config (host regex, feed-URL rule, row extras, file stem)
+  plus one generic parser would let new feeds be config-only.
+- Then add the feeds the removed legacy module listed (Bangkok Post Tech,
+  Techsauce, Thaiger business, TechCrunch), each with a fixture test.
 
 ### P2
-- Add a fixture test for a malformed/empty feed per adapter (error paths).
 - Add a conditional GET (ETag/Last-Modified) cache to cut repeat traffic.
 - Update PRODUCT.md "runtime collection remains scheduled by book-job-scraping"
   once the parent scheduler cut-over is confirmed.
 
-## Done in this pass
+## Done in this pass (pass 1)
 - `news/http.py`: identifying UA, 30 s timeout, bounded retry with backoff on
   429/5xx/timeouts only, `Retry-After` capped at 60 s; all adapters use it.
 - `scripts/run_feeds.py`: one failing feed no longer aborts the rest; errors
@@ -38,3 +34,14 @@ duplicated adapter code.
   failed in a standalone checkout).
 - Added `ruff.toml`, `pytest.ini`, GitHub Actions CI; fixed lint errors;
   untracked committed `__pycache__`.
+
+## Done in this pass (pass 2)
+- New `news/feed_common.py` (text cleaning, timestamp parsing with a source
+  timezone, image/tag extraction, CSV/raw writers); the four adapters use it
+  (~350 duplicated lines removed).
+- `updated_at` no longer silently copies `published_at`: the feedparser
+  fallback is bypassed and pytest errors on its DeprecationWarning.
+- Removed `news/thai_news_scraper.py` (retired monorepo imports); remaining
+  feeds it covered are in the P1 backlog.
+- `tests/test_feed_common.py`: helper tests plus empty/garbage/off-site feed
+  error paths for every adapter (21 -> 28 tests, +16 subtests).
