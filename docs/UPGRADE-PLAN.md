@@ -2,7 +2,7 @@
 
 ## Current state
 
-Score: **7.5/10** (pass 1: 5 -> 7; pass 2: 7 -> 7.5) — four fixture-tested
+Score: **8/10** (pass 1: 5 -> 7; pass 2: 7 -> 7.5; pass 3: 7.5 -> 8) — four fixture-tested
 RSS adapters on one shared helper module plus the `news.v1` read-only API,
 polite fetching, per-feed failure isolation, lint, and offline CI. No legacy
 code left; `updated_at` is now truthful.
@@ -13,11 +13,12 @@ code left; `updated_at` is now truthful.
 - (none open)
 
 ### P1
-- Finish the collapse: `parse_feed`/scraper classes are still per-adapter
-  copies; a per-feed config (host regex, feed-URL rule, row extras, file stem)
-  plus one generic parser would let new feeds be config-only.
-- Then add the feeds the removed legacy module listed (Bangkok Post Tech,
-  Techsauce, Thaiger business, TechCrunch), each with a fixture test.
+- Confirm each opt-in feed (`bangkok_post_tech`, `thaiger_business`,
+  `techcrunch_tech`) against the live site once (fixtures are synthetic,
+  format-based), then register it in the parent `run_news_capture.NEWS_FEEDS`,
+  ingest specs and coverage registry before adding it to the default roster.
+- Techsauce (`https://techsauce.co/feed`): add as a `FeedSpec` only after its
+  feed format is confirmed (not verifiable offline).
 
 ### P2
 - Add a conditional GET (ETag/Last-Modified) cache to cut repeat traffic.
@@ -45,3 +46,21 @@ code left; `updated_at` is now truthful.
   feeds it covered are in the P1 backlog.
 - `tests/test_feed_common.py`: helper tests plus empty/garbage/off-site feed
   error paths for every adapter (21 -> 28 tests, +16 subtests).
+
+## Done in this pass (pass 3)
+- New `news/feed_adapter.py`: `FeedSpec` (host suffix, accepted feed paths or
+  exact URLs, source timezone, row extras + columns, article-id rule, file
+  stem, labels) with one generic `parse_feed`/URL policy/writers and a
+  `FeedScraper` base. The four adapters are now ~50-line specs that keep
+  their public module API; parsed rows, snapshot columns and feed-URL policy
+  verified byte-identical against the previous code on all four fixtures.
+- New config-only opt-in feeds in `news/optional_feeds.py`: Bangkok Post Tech,
+  Thaiger Business, TechCrunch (URLs from the retired legacy roster), with
+  synthetic RSS 2.0 / WordPress-shaped fixtures. Kept out of the default
+  roster because the parent News contract registers only four sources;
+  `scripts/run_feeds.py --feeds NAME...` selects them (unknown names exit 2).
+  Techsauce left out (format unconfirmed).
+- `tests/test_optional_feeds.py` (8 tests): timezone, dedup, off-site /
+  plain-HTTP / lookalike-host drops, WordPress author/topics/guid, feed-URL
+  policy, writers, roster selection. 28 -> 36 passed; ruff 0.15.8 and
+  0.16.9 clean.

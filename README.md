@@ -10,7 +10,8 @@ Bangkok Post Business, Blognone) plus a read-only `news.v1` data API.
 
 ## Entry points
 
-- `scripts/run_feeds.py` -> `news/{matichon,notebookspec,thai_business,thai_tech}_scraper.py` (shared helpers in `news/feed_common.py`)
+- `scripts/run_feeds.py` -> `news/{matichon,notebookspec,thai_business,thai_tech}_scraper.py`, each a `FeedSpec` for the generic parser/scraper in `news/feed_adapter.py` (text/date/CSV helpers in `news/feed_common.py`)
+- Opt-in feeds: `scripts/run_feeds.py --feeds bangkok_post_tech thaiger_business techcrunch_tech` (`news/optional_feeds.py`; not in the default roster)
 
 ## Stack
 
@@ -94,8 +95,16 @@ turns that DeprecationWarning into an error).
 The former `news/thai_news_scraper.py` was removed in the 2026-09 upgrade pass:
 it imported the retired monorepo `adapters`/`core` packages and never ran from a
 standalone checkout. Bangkok Post Business is covered by
-`thai_business_scraper.py`; its other feeds (Bangkok Post Tech, Techsauce,
-Thaiger, TechCrunch) are listed in `docs/UPGRADE-PLAN.md` as candidates.
+`thai_business_scraper.py`. Bangkok Post Tech, Thaiger Business and TechCrunch
+are config-only `FeedSpec`s in `news/optional_feeds.py`, run only when named
+with `--feeds`: the parent News capture and lake ingest register just the four
+default sources. Their fixtures are synthetic RSS 2.0 / WordPress-shaped
+documents, so confirm each live feed once before scheduling it. Techsauce is
+not added (feed format not confirmed offline).
+
+A new feed is a `FeedSpec` (host, accepted feed paths, timezone, row extras,
+file stem, labels) plus a fixture test; parsing, URL policy, writers and the
+scheduler class are shared.
 
 ## Checks (offline)
 

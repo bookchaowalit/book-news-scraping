@@ -21,6 +21,7 @@ if str(ROOT) not in sys.path:
 
 from news.matichon_scraper import MatichonScraper
 from news.notebookspec_scraper import NotebookspecScraper
+from news.optional_feeds import OPTIONAL_FEEDS
 from news.thai_business_scraper import ThaiBusinessNewsScraper
 from news.thai_tech_scraper import ThaiTechNewsScraper
 
@@ -30,6 +31,18 @@ FEEDS = (
     ("thai_tech_news", ThaiTechNewsScraper),
     ("notebookspec_tech", NotebookspecScraper),
 )
+# Default roster = the four sources the parent News contract registers.
+# OPTIONAL_FEEDS run only when named with --feeds.
+ALL_FEEDS = dict((*FEEDS, *OPTIONAL_FEEDS))
+
+
+def select_feeds(names: list[str] | None):
+    if not names:
+        return FEEDS
+    unknown = [name for name in names if name not in ALL_FEEDS]
+    if unknown:
+        raise ValueError(f"unknown feed(s): {', '.join(unknown)}; choose from {', '.join(ALL_FEEDS)}")
+    return tuple((name, ALL_FEEDS[name]) for name in dict.fromkeys(names))
 
 
 async def run_feeds(output_dir: Path, limit: int = 50, feeds=FEEDS) -> list[dict[str, Any]]:
@@ -59,8 +72,18 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=50)
     parser.add_argument("--output-dir", type=Path, default=ROOT / "data" / "exported")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--feeds",
+        nargs="+",
+        metavar="NAME",
+        help=f"feeds to run (default: the contracted four); available: {', '.join(ALL_FEEDS)}",
+    )
     args = parser.parse_args()
-    results = asyncio.run(run_feeds(args.output_dir, args.limit))
+    try:
+        feeds = select_feeds(args.feeds)
+    except ValueError as exc:
+        parser.error(str(exc))
+    results = asyncio.run(run_feeds(args.output_dir, args.limit, feeds))
     if args.json:
         print(json.dumps(results, ensure_ascii=False))
     # Non-zero when any feed failed so the parent control plane still treats
