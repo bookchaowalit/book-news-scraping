@@ -11,7 +11,7 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -102,7 +102,7 @@ class ThaiNewsScraper(RSSScraper):
         if feed_names:
             self.feed_names = feed_names
 
-        articles = self.scrape_feeds()
+        self.scrape_feeds()
 
         self.print_stats()
         self.export_csv("thai_news.csv")

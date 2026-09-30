@@ -10,8 +10,33 @@ from typing import Any, Optional
 from . import config
 
 
+def _product_store_candidates() -> list[Path]:
+    """Directories that may contain the parent ``infra/scripts`` tree.
+
+    A nested checkout finds it by walking up; a standalone checkout next to the
+    Solo Empire repository can point at it with ``SOLO_EMPIRE_ROOT``.
+    """
+
+    candidates: list[Path] = []
+    if config.SOLO_EMPIRE_ROOT.strip():
+        candidates.append(Path(config.SOLO_EMPIRE_ROOT).expanduser().resolve())
+    root = config.PROJECT_ROOT.resolve()
+    candidates.extend([root, *root.parents])
+    return candidates
+
+
+def product_store_available() -> bool:
+    """Return True when the shared ``data_lake`` helpers can be imported."""
+
+    try:
+        _ps_mod()
+    except ImportError:
+        return False
+    return True
+
+
 def _load_product_store():
-    for parent in [config.PROJECT_ROOT.resolve(), *config.PROJECT_ROOT.resolve().parents]:
+    for parent in _product_store_candidates():
         scripts = parent / "infra" / "scripts"
         if (scripts / "data_lake" / "product_store.py").is_file():
             if str(scripts) not in sys.path:

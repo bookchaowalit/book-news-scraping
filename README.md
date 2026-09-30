@@ -75,6 +75,34 @@ collector lock shared with the domain boundary. It uses the parent
 `feedparser`, and `pyarrow` before installing. The plan command never edits
 crontab.
 
+## Polite collection
+
+All four adapters fetch through `news/http.py`: one identifying
+`User-Agent` (`book-news-scraping/1.0`), a 30 s timeout, and at most three
+attempts with exponential backoff (2 s, 4 s) that retry only timeouts,
+connection errors, HTTP 429 (honouring `Retry-After`, capped at 60 s) and 5xx.
+403/404 fail immediately. `scripts/run_feeds.py` isolates publishers: a failing
+feed is reported as `{"source": ..., "error": "<ExceptionClass>"}` (no payload
+text) while the others still run, and the exit code is 1 if any feed failed.
+
+`news/thai_news_scraper.py` is a legacy module that imports the old monorepo
+`adapters`/`core` packages; it is not used by `run_feeds.py` and does not run
+from a standalone checkout.
+
+## Checks (offline)
+
+```bash
+pip install -r requirements.txt pytest ruff
+ruff check .
+python -m pytest -q
+```
+
+Tests replay fixtures under `tests/fixtures/` and never contact publishers.
+The two `news.v1` store tests need the parent `infra/scripts/data_lake`
+helpers; from a standalone checkout they skip unless
+`SOLO_EMPIRE_ROOT=/path/to/solo-empire` is set. CI
+(`.github/workflows/ci.yml`) runs the same lint and tests.
+
 ## Boundaries
 
 - **Lake/API boundary:** capture remains owned here; the parent operator owns

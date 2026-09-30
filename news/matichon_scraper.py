@@ -14,16 +14,16 @@ import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 try:
     import feedparser
-    import httpx
     from bs4 import BeautifulSoup
 except ImportError as exc:  # pragma: no cover - requirements.txt supplies dependencies
     raise RuntimeError("feedparser, httpx, and beautifulsoup4 are required for Matichon capture") from exc
 
+from news.http import fetch_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "data" / "exported"
@@ -177,19 +177,7 @@ def parse_feed(raw: bytes | str, feed_url: str = FEED_URL, limit: int = 50) -> t
 
 
 def fetch_feed(feed_url: str) -> bytes:
-    response = httpx.get(
-        normalize_feed_url(feed_url),
-        headers={
-            "User-Agent": "book-job-scraping/1.0",
-            "Accept": "application/rss+xml, application/xml, text/xml",
-        },
-        timeout=30,
-        follow_redirects=True,
-    )
-    response.raise_for_status()
-    if not response.content:
-        raise ValueError("Matichon RSS response is empty")
-    return response.content
+    return fetch_bytes(normalize_feed_url(feed_url), source="Matichon RSS")
 
 
 def write_raw(raw: bytes, output_dir: Path) -> Path:

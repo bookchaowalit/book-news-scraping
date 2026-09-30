@@ -10,7 +10,15 @@ from news_data import config
 from news_data import api, store
 
 
+LAKE_HELPERS = store.product_store_available()
+NEEDS_LAKE = unittest.skipUnless(
+    LAKE_HELPERS,
+    "parent data_lake helpers not found; set SOLO_EMPIRE_ROOT to a Solo Empire checkout",
+)
+
+
 class NewsDataApiTests(unittest.TestCase):
+    @NEEDS_LAKE
     def test_news_item_preserves_attribution_and_normalizes_headline(self) -> None:
         item = store.news_item_from_bronze(
         {
@@ -47,6 +55,7 @@ class NewsDataApiTests(unittest.TestCase):
         self.assertIn('data_status="forbidden"', text)
         self.assertFalse(config.ALLOW_REFRESH)
 
+    @NEEDS_LAKE
     def test_history_deduplicates_replays_but_keeps_new_observation_times(self) -> None:
         base = {
             "source": "Matichon",

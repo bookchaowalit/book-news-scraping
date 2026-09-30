@@ -32,11 +32,23 @@ FEEDS = (
 )
 
 
-async def run_feeds(output_dir: Path, limit: int = 50) -> list[dict[str, Any]]:
+async def run_feeds(output_dir: Path, limit: int = 50, feeds=FEEDS) -> list[dict[str, Any]]:
+    """Run every feed; one failing publisher must not block the others.
+
+    Failures are reported as ``{"source": name, "error": <class>}`` entries.
+    Only the exception class is recorded so publisher payloads never leak
+    into logs.
+    """
+
     results: list[dict[str, Any]] = []
-    for name, cls in FEEDS:
-        scraper = cls(limit=limit, output_dir=output_dir)
-        batch = await scraper.run()
+    for name, cls in feeds:
+        try:
+            scraper = cls(limit=limit, output_dir=output_dir)
+            batch = await scraper.run()
+        except Exception as exc:  # noqa: BLE001 - isolate each publisher
+            results.append({"source": name, "error": type(exc).__name__})
+            print(f"[run_feeds] {name}: failed ({type(exc).__name__})", file=sys.stderr)
+            continue
         results.extend(batch)
         print(f"[run_feeds] {name}: {batch[0].get('count') if batch else 0}")
     return results
@@ -51,7 +63,9 @@ def main() -> int:
     results = asyncio.run(run_feeds(args.output_dir, args.limit))
     if args.json:
         print(json.dumps(results, ensure_ascii=False))
-    return 0
+    # Non-zero when any feed failed so the parent control plane still treats
+    # the cycle as incomplete.
+    return 1 if any("error" in result for result in results) else 0
 
 
 if __name__ == "__main__":
