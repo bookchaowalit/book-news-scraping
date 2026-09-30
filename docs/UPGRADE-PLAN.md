@@ -74,3 +74,9 @@ code left; `updated_at` is now truthful.
   Zero-width space / word joiner / BOM are removed, and the length limit no
   longer splits a grapheme (Thai tone marks and sara am, emoji modifiers and
   ZWJ sequences) via `truncate_text`. 4 regression tests.
+- Double-escaped summaries (`&lt;p&gt;Hello &lt;b&gt;world&lt;/b&gt;&lt;/p&gt;`
+  after feedparser, and escaped CDATA wrappers) stored raw tags because the
+  single unescape ran after tag stripping. `clean_text` now strips tags revealed
+  by that unescape (no second entity decode, so a literal `&lt;div&gt;` stays
+  text) and unwraps leftover `<![CDATA[...]]>`. Regression test uses real
+  `feedparser.parse` output; 43 passed / 2 skipped; ruff 0.15.8 + 0.16.9.

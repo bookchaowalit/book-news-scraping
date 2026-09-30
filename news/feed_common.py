@@ -26,6 +26,8 @@ def utc_now() -> str:
 # A real tag ("<p>", "</a>", "<br/>", "<img src=...>", "<!-- -->"); a bare
 # "<" in plain text ("x<y matters") is not markup.
 _TAG_RE = re.compile(r"<(?:/?[A-Za-z][A-Za-z0-9:-]*(?:\s[^<>]*)?/?|!--.*?--)>", re.S)
+# A CDATA wrapper that survived as text ("<![CDATA[...]]>" escaped twice).
+_CDATA_RE = re.compile(r"<!\[CDATA\[(.*?)\]\]>", re.S)
 # Invisible characters that ``\s`` does not match.
 _INVISIBLE_RE = re.compile("[\u200b\u2060\ufeff\u00ad]")
 
@@ -70,7 +72,9 @@ def clean_text(value: Any, limit: int) -> str:
     Markup is parsed only when the value contains real tags; BeautifulSoup
     then decodes entities itself, so "&amp;lt;div&amp;gt;" stays the literal
     text "&lt;div&gt;" instead of being decoded twice. Plain text is
-    unescaped once.
+    unescaped once; if that reveals tags (a double-escaped summary such as
+    "&lt;p&gt;Hello&lt;/p&gt;"), they are removed without decoding entities a
+    second time. Leftover CDATA wrappers are unwrapped.
     """
 
     text = str(value or "")
@@ -78,6 +82,9 @@ def clean_text(value: Any, limit: int) -> str:
         text = BeautifulSoup(text, "html.parser").get_text(" ", strip=True)
     else:
         text = html_lib.unescape(text)
+        if _TAG_RE.search(text):
+            text = _TAG_RE.sub(" ", text)
+    text = _CDATA_RE.sub(r" \1 ", text)
     text = _INVISIBLE_RE.sub("", text)
     return truncate_text(re.sub(r"\s+", " ", text).strip(), limit)
 

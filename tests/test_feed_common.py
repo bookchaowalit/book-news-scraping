@@ -86,3 +86,19 @@ class CleanTextEdgeCaseTests(unittest.TestCase):
         self.assertEqual(feed_common.clean_text("กินน้ำ", 5), "กิน")
         self.assertEqual(feed_common.clean_text("ab\U0001f44d\U0001f3fd", 3), "ab")
         self.assertEqual(feed_common.clean_text("ab\U0001f469‍\U0001f4bb", 4), "ab")
+
+    def test_double_escaped_feed_summaries_lose_their_tags(self):
+        # Real feedparser output for summaries whose HTML was escaped twice.
+        feed = b"""<?xml version="1.0"?><rss version="2.0"><channel><title>T</title>
+<item><title>a</title><description>&amp;lt;p&amp;gt;Hello &amp;lt;b&amp;gt;world&amp;lt;/b&amp;gt;&amp;lt;/p&amp;gt;</description></item>
+<item><title>b</title><description><![CDATA[&lt;![CDATA[<p>cd</p>]]&gt;]]></description></item>
+<item><title>c</title><description>&amp;lt;![CDATA[&amp;lt;p&amp;gt;cd&amp;lt;/p&amp;gt;]]&amp;gt;</description></item>
+<item><title>d</title><description>&amp;lt;p&amp;gt;Use &amp;amp;lt;div&amp;amp;gt; tags&amp;lt;/p&amp;gt;</description></item>
+</channel></rss>"""
+        summaries = [entry.summary for entry in feedparser.parse(feed).entries]
+        self.assertEqual(summaries[0], "&lt;p&gt;Hello &lt;b&gt;world&lt;/b&gt;&lt;/p&gt;")
+        self.assertEqual(summaries[1], "&lt;![CDATA[<p>cd</p>]]&gt;")
+        cleaned = [feed_common.clean_text(summary, 100) for summary in summaries]
+        # Entities are still decoded only once: a literal "&lt;div&gt;" on the
+        # page stays that text instead of becoming a tag and vanishing.
+        self.assertEqual(cleaned, ["Hello world", "cd", "cd", "Use &lt;div&gt; tags"])
