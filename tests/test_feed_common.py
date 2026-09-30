@@ -66,3 +66,23 @@ class MalformedFeedTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CleanTextEdgeCaseTests(unittest.TestCase):
+    def test_bare_less_than_in_plain_text_is_kept(self):
+        self.assertEqual(feed_common.clean_text("Why x<y matters", 100), "Why x<y matters")
+
+    def test_entities_inside_markup_are_decoded_once(self):
+        self.assertEqual(
+            feed_common.clean_text("<p>Use &amp;lt;div&amp;gt; tags</p>", 100),
+            "Use &lt;div&gt; tags",
+        )
+        self.assertEqual(feed_common.clean_text("AT&amp;T", 100), "AT&T")
+
+    def test_zero_width_characters_are_removed(self):
+        self.assertEqual(feed_common.clean_text("ข่าว​ ด่วน﻿", 100), "ข่าว ด่วน")
+
+    def test_limit_does_not_split_graphemes(self):
+        self.assertEqual(feed_common.clean_text("กินน้ำ", 5), "กิน")
+        self.assertEqual(feed_common.clean_text("ab\U0001f44d\U0001f3fd", 3), "ab")
+        self.assertEqual(feed_common.clean_text("ab\U0001f469‍\U0001f4bb", 4), "ab")

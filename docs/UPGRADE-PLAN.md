@@ -67,3 +67,10 @@ code left; `updated_at` is now truthful.
 - Refresh auth: `/v1/refresh` compares the bearer token with `hmac.compare_digest`
   (`_refresh_token_ok`) instead of `==`, which leaked the matching prefix
   length through timing; `tests/test_refresh_token_compare.py` pins it.
+- Text edge cases in `feed_common.clean_text`: plain titles with a bare
+  "<" ("Why x<y matters") were cut to "Why x" by the HTML parser; markup is
+  now parsed only when real tags are present. Entities inside markup were
+  decoded twice ("&amp;lt;div&amp;gt;" became a literal "<div>"); now once.
+  Zero-width space / word joiner / BOM are removed, and the length limit no
+  longer splits a grapheme (Thai tone marks and sara am, emoji modifiers and
+  ZWJ sequences) via `truncate_text`. 4 regression tests.

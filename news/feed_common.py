@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import html as html_lib
 import re
+import unicodedata
 from datetime import datetime, timezone, tzinfo
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -22,13 +23,63 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def clean_text(value: Any, limit: int) -> str:
-    """Unescape entities, strip markup and collapse whitespace."""
+# A real tag ("<p>", "</a>", "<br/>", "<img src=...>", "<!-- -->"); a bare
+# "<" in plain text ("x<y matters") is not markup.
+_TAG_RE = re.compile(r"<(?:/?[A-Za-z][A-Za-z0-9:-]*(?:\s[^<>]*)?/?|!--.*?--)>", re.S)
+# Invisible characters that ``\s`` does not match.
+_INVISIBLE_RE = re.compile("[\u200b\u2060\ufeff\u00ad]")
 
-    text = html_lib.unescape(str(value or ""))
-    if "<" in text or ">" in text:
+
+def _is_cluster_continuation(char: str) -> bool:
+    """True for a character that belongs to the previous grapheme.
+
+    Combining marks (Thai tone marks and upper/lower vowels, accents),
+    zero-width joiner, variation selectors and emoji skin-tone modifiers.
+    """
+
+    return (
+        unicodedata.category(char) in ("Mn", "Mc", "Me")
+        or char in "\u0e33\u0eb3\u200d"  # Thai/Lao sara am are SpacingMarks
+        or "\ufe00" <= char <= "\ufe0f"
+        or "\U0001f3fb" <= char <= "\U0001f3ff"
+    )
+
+
+def truncate_text(text: str, limit: int) -> str:
+    """Cut ``text`` to at most ``limit`` code points without splitting a grapheme.
+
+    A plain slice could keep "น้" of "น้ำ" or drop a skin-tone modifier; the cut
+    moves back to the start of the cluster that would be split.
+    """
+
+    if limit <= 0:
+        return ""
+    if len(text) <= limit:
+        return text
+    end = limit
+    while end > 0 and (
+        _is_cluster_continuation(text[end]) or text[end - 1] == "\u200d"
+    ):
+        end -= 1
+    return text[:end].rstrip()
+
+
+def clean_text(value: Any, limit: int) -> str:
+    """Strip markup, decode entities once and collapse whitespace.
+
+    Markup is parsed only when the value contains real tags; BeautifulSoup
+    then decodes entities itself, so "&amp;lt;div&amp;gt;" stays the literal
+    text "&lt;div&gt;" instead of being decoded twice. Plain text is
+    unescaped once.
+    """
+
+    text = str(value or "")
+    if _TAG_RE.search(text):
         text = BeautifulSoup(text, "html.parser").get_text(" ", strip=True)
-    return re.sub(r"\s+", " ", text).strip()[:limit]
+    else:
+        text = html_lib.unescape(text)
+    text = _INVISIBLE_RE.sub("", text)
+    return truncate_text(re.sub(r"\s+", " ", text).strip(), limit)
 
 
 def _raw(entry: Any, key: str) -> Any:
