@@ -5,11 +5,13 @@
 
 ## Purpose
 
-Thai news headline/article fetch prototypes (Matichon and generic Thai news modules).
+Bounded capture of Thai news from public RSS/Atom feeds (Matichon, NotebookSpec,
+Bangkok Post Business, Blognone) plus a read-only `news.v1` data API.
 
 ## Entry points
 
-- `news/matichon_scraper.py, news/thai_news_scraper.py`
+- `scripts/run_feeds.py` -> `news/{matichon,notebookspec,thai_business,thai_tech}_scraper.py`, each a `FeedSpec` for the generic parser/scraper in `news/feed_adapter.py` (text/date/CSV helpers in `news/feed_common.py`)
+- Opt-in feeds: `scripts/run_feeds.py --feeds bangkok_post_tech thaiger_business techcrunch_tech` (`news/optional_feeds.py`; not in the default roster)
 
 ## Stack
 
@@ -74,6 +76,49 @@ collector lock shared with the domain boundary. It uses the parent
 `infra/scripts/setup/run-python3.sh` runtime and checks for `duckdb`,
 `feedparser`, and `pyarrow` before installing. The plan command never edits
 crontab.
+
+## Polite collection
+
+All four adapters fetch through `news/http.py`: one identifying
+`User-Agent` (`book-news-scraping/1.0`), a 30 s timeout, and at most three
+attempts with exponential backoff (2 s, 4 s) that retry only timeouts,
+connection errors, HTTP 429 (honouring `Retry-After`, capped at 60 s) and 5xx.
+403/404 fail immediately. `scripts/run_feeds.py` isolates publishers: a failing
+feed is reported as `{"source": ..., "error": "<ExceptionClass>"}` (no payload
+text) while the others still run, and the exit code is 1 if any feed failed.
+
+Text cleaning, date parsing and CSV writing are shared in `news/feed_common.py`.
+`updated_at` is the entry's own update time and is empty when a feed has none
+(feedparser's deprecated `updated` -> `published` fallback is not used; pytest
+turns that DeprecationWarning into an error).
+
+The former `news/thai_news_scraper.py` was removed in the 2026-09 upgrade pass:
+it imported the retired monorepo `adapters`/`core` packages and never ran from a
+standalone checkout. Bangkok Post Business is covered by
+`thai_business_scraper.py`. Bangkok Post Tech, Thaiger Business and TechCrunch
+are config-only `FeedSpec`s in `news/optional_feeds.py`, run only when named
+with `--feeds`: the parent News capture and lake ingest register just the four
+default sources. Their fixtures are synthetic RSS 2.0 / WordPress-shaped
+documents, so confirm each live feed once before scheduling it. Techsauce is
+not added (feed format not confirmed offline).
+
+A new feed is a `FeedSpec` (host, accepted feed paths, timezone, row extras,
+file stem, labels) plus a fixture test; parsing, URL policy, writers and the
+scheduler class are shared.
+
+## Checks (offline)
+
+```bash
+pip install -r requirements.txt pytest ruff
+ruff check .
+python -m pytest -q
+```
+
+Tests replay fixtures under `tests/fixtures/` and never contact publishers.
+The two `news.v1` store tests need the parent `infra/scripts/data_lake`
+helpers; from a standalone checkout they skip unless
+`SOLO_EMPIRE_ROOT=/path/to/solo-empire` is set. CI
+(`.github/workflows/ci.yml`) runs the same lint and tests.
 
 ## Boundaries
 

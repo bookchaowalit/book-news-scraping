@@ -49,7 +49,7 @@ class MatichonScraperTests(unittest.TestCase):
                 limit=10,
                 output_dir=temp_dir,
             )
-            with patch("news.matichon_scraper.httpx.get", return_value=FakeResponse(self.raw)):
+            with patch("news.http.httpx.get", return_value=FakeResponse(self.raw)):
                 result = asyncio.run(scraper.run())
 
             self.assertEqual(result[0]["source"], "matichon_news")

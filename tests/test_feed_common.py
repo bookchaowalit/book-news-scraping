@@ -1,0 +1,104 @@
+"""Shared feed helpers and per-adapter malformed-feed error paths (offline)."""
+
+from __future__ import annotations
+
+import unittest
+from zoneinfo import ZoneInfo
+
+import feedparser
+
+from news import feed_common
+from news import matichon_scraper, notebookspec_scraper, thai_business_scraper, thai_tech_scraper
+
+RSS_NO_UPDATED = b"""<?xml version="1.0"?><rss version="2.0"><channel><title>T</title>
+<item><title>A</title><link>https://example.com/a</link>
+<pubDate>Tue, 25 Aug 2026 08:30:00 +0000</pubDate>
+<category>x</category><category>x</category><category>y</category></item>
+</channel></rss>"""
+
+ATOM_WITH_UPDATED = b"""<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>T</title>
+<entry><title>A</title><link href="https://example.com/a"/><id>a</id>
+<published>2026-08-25T08:30:00Z</published><updated>2026-08-26T09:00:00Z</updated></entry></feed>"""
+
+
+class FeedCommonTests(unittest.TestCase):
+    def test_updated_at_is_empty_when_feed_has_no_update_time(self):
+        entry = feedparser.parse(RSS_NO_UPDATED).entries[0]
+        self.assertEqual(feed_common.published_at(entry), "2026-08-25T08:30:00Z")
+        self.assertEqual(feed_common.updated_at(entry), "")
+
+    def test_updated_at_reads_real_update_time(self):
+        entry = feedparser.parse(ATOM_WITH_UPDATED).entries[0]
+        self.assertEqual(feed_common.updated_at(entry), "2026-08-26T09:00:00Z")
+
+    def test_naive_timestamps_use_the_source_timezone(self):
+        bangkok = ZoneInfo("Asia/Bangkok")
+        self.assertEqual(feed_common.parse_timestamp("2026-08-25T08:00:00", bangkok), "2026-08-25T01:00:00Z")
+        self.assertEqual(feed_common.parse_timestamp("2026-08-25T08:00:00"), "2026-08-25T08:00:00Z")
+        self.assertEqual(feed_common.parse_timestamp("not a date"), "")
+        self.assertEqual(feed_common.parse_timestamp(None), "")
+
+    def test_tag_terms_deduplicates(self):
+        entry = feedparser.parse(RSS_NO_UPDATED).entries[0]
+        self.assertEqual(feed_common.tag_terms(entry), "x,y")
+
+    def test_clean_text_strips_markup_and_limits(self):
+        self.assertEqual(feed_common.clean_text("<p>a &amp;  <b>b</b></p>", 100), "a & b")
+        self.assertEqual(feed_common.clean_text("abcdef", 3), "abc")
+
+
+class MalformedFeedTests(unittest.TestCase):
+    ADAPTERS = (matichon_scraper, notebookspec_scraper, thai_business_scraper, thai_tech_scraper)
+
+    def test_every_adapter_rejects_empty_and_garbage_feeds(self):
+        for module in self.ADAPTERS:
+            for raw in (b"", b"<html><body>not a feed</body></html>", b"<rss><channel></channel></rss>"):
+                with self.subTest(module=module.__name__, raw=raw[:20]):
+                    with self.assertRaises(ValueError):
+                        module.parse_feed(raw, module.FEED_URL)
+
+    def test_every_adapter_rejects_feeds_with_only_off_site_entries(self):
+        for module in self.ADAPTERS:
+            with self.subTest(module=module.__name__):
+                with self.assertRaisesRegex(ValueError, "contract-compliant"):
+                    module.parse_feed(RSS_NO_UPDATED, module.FEED_URL)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class CleanTextEdgeCaseTests(unittest.TestCase):
+    def test_bare_less_than_in_plain_text_is_kept(self):
+        self.assertEqual(feed_common.clean_text("Why x<y matters", 100), "Why x<y matters")
+
+    def test_entities_inside_markup_are_decoded_once(self):
+        self.assertEqual(
+            feed_common.clean_text("<p>Use &amp;lt;div&amp;gt; tags</p>", 100),
+            "Use &lt;div&gt; tags",
+        )
+        self.assertEqual(feed_common.clean_text("AT&amp;T", 100), "AT&T")
+
+    def test_zero_width_characters_are_removed(self):
+        self.assertEqual(feed_common.clean_text("ข่าว​ ด่วน﻿", 100), "ข่าว ด่วน")
+
+    def test_limit_does_not_split_graphemes(self):
+        self.assertEqual(feed_common.clean_text("กินน้ำ", 5), "กิน")
+        self.assertEqual(feed_common.clean_text("ab\U0001f44d\U0001f3fd", 3), "ab")
+        self.assertEqual(feed_common.clean_text("ab\U0001f469‍\U0001f4bb", 4), "ab")
+
+    def test_double_escaped_feed_summaries_lose_their_tags(self):
+        # Real feedparser output for summaries whose HTML was escaped twice.
+        feed = b"""<?xml version="1.0"?><rss version="2.0"><channel><title>T</title>
+<item><title>a</title><description>&amp;lt;p&amp;gt;Hello &amp;lt;b&amp;gt;world&amp;lt;/b&amp;gt;&amp;lt;/p&amp;gt;</description></item>
+<item><title>b</title><description><![CDATA[&lt;![CDATA[<p>cd</p>]]&gt;]]></description></item>
+<item><title>c</title><description>&amp;lt;![CDATA[&amp;lt;p&amp;gt;cd&amp;lt;/p&amp;gt;]]&amp;gt;</description></item>
+<item><title>d</title><description>&amp;lt;p&amp;gt;Use &amp;amp;lt;div&amp;amp;gt; tags&amp;lt;/p&amp;gt;</description></item>
+</channel></rss>"""
+        summaries = [entry.summary for entry in feedparser.parse(feed).entries]
+        self.assertEqual(summaries[0], "&lt;p&gt;Hello &lt;b&gt;world&lt;/b&gt;&lt;/p&gt;")
+        self.assertEqual(summaries[1], "&lt;![CDATA[<p>cd</p>]]&gt;")
+        cleaned = [feed_common.clean_text(summary, 100) for summary in summaries]
+        # Entities are still decoded only once: a literal "&lt;div&gt;" on the
+        # page stays that text instead of becoming a tag and vanishing.
+        self.assertEqual(cleaned, ["Hello world", "cd", "cd", "Use &lt;div&gt; tags"])

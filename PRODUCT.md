@@ -44,11 +44,12 @@ does not call publishers and does not republish article bodies.
 
 ## Purpose
 
-Thai news headline/article fetch prototypes (Matichon and generic Thai news modules).
+Bounded capture of Thai news from public RSS/Atom feeds (Matichon, NotebookSpec,
+Bangkok Post Business, Blognone) plus a read-only `news.v1` data API.
 
 ## Entry points
 
-- `news/matichon_scraper.py, news/thai_news_scraper.py`
+- `scripts/run_feeds.py` -> `news/{matichon,notebookspec,thai_business,thai_tech}_scraper.py` (shared helpers in `news/feed_common.py`)
 
 ## Stack
 

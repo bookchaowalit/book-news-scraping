@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic fixture in the standard WordPress RSS 2.0 shape (content:encoded,
+     dc:creator, category, guid ?p=); placeholders, not captured from the live feed. -->
+<rss version="2.0"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Sample tech site (synthetic fixture)</title>
+    <atom:link href="https://techcrunch.com/feed/" rel="self" type="application/rss+xml" />
+    <link>https://techcrunch.com/</link>
+    <description>Technology news</description>
+    <item>
+      <title>Sample startup headline &#038; more</title>
+      <link>https://techcrunch.com/2026/08/25/sample-startup-headline/</link>
+      <dc:creator><![CDATA[Sample Author]]></dc:creator>
+      <pubDate>Tue, 25 Aug 2026 16:05:00 +0000</pubDate>
+      <category><![CDATA[Startups]]></category>
+      <category><![CDATA[AI]]></category>
+      <category><![CDATA[Startups]]></category>
+      <guid isPermaLink="false">https://techcrunch.com/?p=200001</guid>
+      <description><![CDATA[<p>Sample summary.</p>]]></description>
+    </item>
+    <item>
+      <title>Subdomain link is kept</title>
+      <link>https://news.techcrunch.com/2026/08/25/sample-subdomain/</link>
+      <pubDate>Tue, 25 Aug 2026 15:00:00 +0000</pubDate>
+      <guid isPermaLink="false">https://techcrunch.com/?p=200002</guid>
+    </item>
+    <item>
+      <title>Lookalike host is discarded</title>
+      <link>https://techcrunch.com.evil.example/2026/08/25/phish/</link>
+      <pubDate>Tue, 25 Aug 2026 14:00:00 +0000</pubDate>
+      <guid isPermaLink="false">lookalike</guid>
+    </item>
+  </channel>
+</rss>
