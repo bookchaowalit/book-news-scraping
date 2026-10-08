@@ -1,0 +1,8 @@
+system_id: bookchaowalit/book-apps/tools/book-news-scraping
+prefix: CARD
+brand: "BOOK NEWS SCRAPING"
+subtitle: "เก็บข่าวไทยจาก RSS/Atom แบบจำกัดขอบเขต พร้อม news.v1 data API"
+footer: "Book News Scraping — Product Card"
+color: "#2f4b6e"
+audience: internal
+tier: L0
