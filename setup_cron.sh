@@ -19,6 +19,15 @@ LOG_FILE="${PROJECT_DIR}/data/logs/cron.log"
 # lake replay and health gate. Resolve the parent by contract instead of
 # relying on a fixed number of nested-repository path segments.
 find_solo_empire_root() {
+    # The runner lives in bookchaowalit/solo-data-lake since 2026-10-11: honour an explicit
+    # SOLO_DATA_LAKE_ROOT, then the sibling checkout in the Book Dev layout, then the old ancestor walk.
+    local candidate
+    for candidate in "${SOLO_DATA_LAKE_ROOT:-}" "${PROJECT_DIR}/../../../../private/solo-data-lake"; do
+        if [ -n "${candidate}" ] && [ -f "${candidate}/infra/scripts/data_lake/run_news_capture.py" ]; then
+            (cd "${candidate}" && pwd)
+            return 0
+        fi
+    done
     local cursor="${PROJECT_DIR}"
     while [ "${cursor}" != "/" ]; do
         if [ -f "${cursor}/infra/scripts/data_lake/run_news_capture.py" ]; then
