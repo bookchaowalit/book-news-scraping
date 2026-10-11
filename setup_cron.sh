@@ -3,6 +3,7 @@
 # This does not remove the compatibility scheduler in book-job-scraping.
 #
 # Usage:
+#   SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake \
 #   SOLO_EMPIRE_DATA_LAKE_URI=/absolute/path/to/lake bash setup_cron.sh plan
 #   bash setup_cron.sh install
 #   bash setup_cron.sh remove
@@ -15,45 +16,23 @@ CRON_TAG="# book-news-scraping-feeds"
 LOCK_FILE="${PROJECT_DIR}/data/news-feeds.lock"
 LOG_FILE="${PROJECT_DIR}/data/logs/cron.log"
 
-# The collector owns source access, while the parent control plane owns the
-# lake replay and health gate. Resolve the parent by contract instead of
-# relying on a fixed number of nested-repository path segments.
-find_solo_empire_root() {
-    # The runner lives in bookchaowalit/solo-data-lake since 2026-10-11: honour an explicit
-    # SOLO_DATA_LAKE_ROOT, then the sibling checkout in the Book Dev layout, then the old ancestor walk.
-    local candidate
-    for candidate in "${SOLO_DATA_LAKE_ROOT:-}" "${PROJECT_DIR}/../../../../private/solo-data-lake"; do
-        if [ -n "${candidate}" ] && [ -f "${candidate}/infra/scripts/data_lake/run_news_capture.py" ]; then
-            (cd "${candidate}" && pwd)
-            return 0
-        fi
-    done
-    local cursor="${PROJECT_DIR}"
-    while [ "${cursor}" != "/" ]; do
-        if [ -f "${cursor}/infra/scripts/data_lake/run_news_capture.py" ]; then
-            printf '%s\n' "${cursor}"
-            return 0
-        fi
-        cursor="$(dirname "${cursor}")"
-    done
-    return 1
-}
-
-SOLO_EMPIRE_ROOT="$(find_solo_empire_root || true)"
-CONTROL_PLANE_RUNNER="${SOLO_EMPIRE_ROOT:+${SOLO_EMPIRE_ROOT}/infra/scripts/data_lake/run_news_capture.py}"
-PYTHON_WRAPPER="${SOLO_EMPIRE_ROOT:+${SOLO_EMPIRE_ROOT}/infra/scripts/setup/run-python3.sh}"
+# The collector owns source access, while the solo-data-lake runtime owns the
+# lake replay and health gate. Locate it only through SOLO_DATA_LAKE_ROOT.
+LAKE_RUNTIME_ROOT="${SOLO_DATA_LAKE_ROOT:-}"
+CONTROL_PLANE_RUNNER="${LAKE_RUNTIME_ROOT:+${LAKE_RUNTIME_ROOT}/infra/scripts/data_lake/run_news_capture.py}"
+PYTHON_WRAPPER="${LAKE_RUNTIME_ROOT:+${LAKE_RUNTIME_ROOT}/infra/scripts/setup/run-python3.sh}"
 
 shell_quote() {
     printf '%q' "$1"
 }
 
 require_control_plane() {
-    if [ -z "${SOLO_EMPIRE_ROOT}" ] || [ ! -f "${CONTROL_PLANE_RUNNER}" ]; then
-        echo "Cannot find Solo Empire News control-plane runner" >&2
+    if [ -z "${LAKE_RUNTIME_ROOT}" ] || [ ! -f "${CONTROL_PLANE_RUNNER}" ]; then
+        echo "Set SOLO_DATA_LAKE_ROOT to a solo-data-lake checkout (news control-plane runner not found)" >&2
         return 1
     fi
     if [ ! -f "${PYTHON_WRAPPER}" ]; then
-        echo "Cannot find Solo Empire Python wrapper: ${PYTHON_WRAPPER}" >&2
+        echo "Cannot find solo-data-lake Python wrapper: ${PYTHON_WRAPPER}" >&2
         return 1
     fi
 }
@@ -61,7 +40,7 @@ require_control_plane() {
 require_python_runtime() {
     require_control_plane
     if ! "${PYTHON_WRAPPER}" -c "import duckdb, feedparser, pyarrow" >/dev/null 2>&1; then
-        echo "Refusing cron install: parent Python runtime is missing data-lake/feedparser dependencies" >&2
+        echo "Refusing cron install: solo-data-lake Python runtime is missing data-lake/feedparser dependencies" >&2
         return 1
     fi
 }
@@ -88,7 +67,7 @@ cron_entry() {
     local lake_uri="$1"
     require_control_plane
     printf '15 */2 * * * cd %s && %s %s --lake-uri %s --lock-path %s --limit 50 --attempts 2 --collector-timeout-seconds 120 --json >> %s 2>&1 %s\n' \
-        "$(shell_quote "${SOLO_EMPIRE_ROOT}")" \
+        "$(shell_quote "${LAKE_RUNTIME_ROOT}")" \
         "$(shell_quote "${PYTHON_WRAPPER}")" \
         "$(shell_quote "${CONTROL_PLANE_RUNNER}")" \
         "$(shell_quote "${lake_uri}")" \

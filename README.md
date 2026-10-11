@@ -23,7 +23,7 @@ Python
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python3 scripts/run_feeds.py --limit 20
-bash setup_cron.sh plan      # read-only; prints the parent lake runner entry
+bash setup_cron.sh plan      # read-only; prints the solo-data-lake runner entry
 bash setup_cron.sh status
 ```
 
@@ -66,14 +66,15 @@ The scheduler plan uses the same control-plane runner and source lock. Review
 it with an explicit lake before any installation:
 
 ```bash
+SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake \
 SOLO_EMPIRE_DATA_LAKE_URI=/absolute/path/to/shared/lake bash setup_cron.sh plan
 ```
 
 Installation requires `SOLO_EMPIRE_DATA_LAKE_URI` and refuses a missing or
 non-writable local path. When approved, `bash setup_cron.sh install` runs the
 bounded runner every two hours at minute 15, writes JSON logs, and keeps the
-collector lock shared with the domain boundary. It uses the parent
-`infra/scripts/setup/run-python3.sh` runtime and checks for `duckdb`,
+collector lock shared with the domain boundary. It uses the
+solo-data-lake `infra/scripts/setup/run-python3.sh` runtime (`SOLO_DATA_LAKE_ROOT`) and checks for `duckdb`,
 `feedparser`, and `pyarrow` before installing. The plan command never edits
 crontab.
 
@@ -115,9 +116,9 @@ python -m pytest -q
 ```
 
 Tests replay fixtures under `tests/fixtures/` and never contact publishers.
-The two `news.v1` store tests need the parent `infra/scripts/data_lake`
-helpers; from a standalone checkout they skip unless
-`SOLO_EMPIRE_ROOT=/path/to/solo-empire` is set. CI
+The two `news.v1` store tests need the shared `data_lake` helpers; they skip
+unless `solo-empire-data-lake` is installed or
+`SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake` is set. CI
 (`.github/workflows/ci.yml`) runs the same lint and tests.
 
 ## Boundaries

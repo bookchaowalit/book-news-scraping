@@ -13,7 +13,7 @@ from news_data import api, store
 LAKE_HELPERS = store.product_store_available()
 NEEDS_LAKE = unittest.skipUnless(
     LAKE_HELPERS,
-    "parent data_lake helpers not found; set SOLO_EMPIRE_ROOT to a Solo Empire checkout",
+    "data_lake helpers not found; install solo-empire-data-lake or set SOLO_DATA_LAKE_ROOT",
 )
 
 

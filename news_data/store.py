@@ -2,27 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import sys
 from pathlib import Path
 from typing import Any, Optional
 
 from . import config
-
-
-def _product_store_candidates() -> list[Path]:
-    """Directories that may contain the parent ``infra/scripts`` tree.
-
-    A nested checkout finds it by walking up; a standalone checkout next to the
-    Solo Empire repository can point at it with ``SOLO_EMPIRE_ROOT``.
-    """
-
-    candidates: list[Path] = []
-    if config.SOLO_EMPIRE_ROOT.strip():
-        candidates.append(Path(config.SOLO_EMPIRE_ROOT).expanduser().resolve())
-    root = config.PROJECT_ROOT.resolve()
-    candidates.extend([root, *root.parents])
-    return candidates
 
 
 def product_store_available() -> bool:
@@ -36,12 +22,11 @@ def product_store_available() -> bool:
 
 
 def _load_product_store():
-    for parent in _product_store_candidates():
-        scripts = parent / "infra" / "scripts"
-        if (scripts / "data_lake" / "product_store.py").is_file():
-            if str(scripts) not in sys.path:
-                sys.path.insert(0, str(scripts))
-            break
+    root = config.SOLO_DATA_LAKE_ROOT.strip()
+    if root and importlib.util.find_spec("data_lake") is None:
+        scripts = Path(root).expanduser().resolve() / "infra" / "scripts"
+        if (scripts / "data_lake" / "product_store.py").is_file() and str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
     from data_lake import product_store as ps  # type: ignore
 
     return ps
@@ -73,7 +58,6 @@ def _contract():
         bronze_schema_version=config.LAKE_BRONZE_SCHEMA_VERSION,
         project_root=config.PROJECT_ROOT,
         data_lake_uri=_lake_uri() or "",
-        solo_empire_root=config.SOLO_EMPIRE_ROOT,
         lineage_filename=config.LINEAGE_FILE,
         datasets=(config.LAKE_DATASET_ARTICLES, config.LAKE_DATASET_HISTORY),
     )

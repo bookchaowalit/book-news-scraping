@@ -30,7 +30,7 @@ code left; `updated_at` is now truthful.
   429/5xx/timeouts only, `Retry-After` capped at 60 s; all adapters use it.
 - `scripts/run_feeds.py`: one failing feed no longer aborts the rest; errors
   are reported by exception class only; exit 1 if any feed failed.
-- `news_data/store.py`: honours `SOLO_EMPIRE_ROOT` to find the parent lake
+- `news_data/store.py`: honours `SOLO_DATA_LAKE_ROOT` to find the parent lake
   helpers; the two lake tests skip cleanly when they are absent (previously
   failed in a standalone checkout).
 - Added `ruff.toml`, `pytest.ini`, GitHub Actions CI; fixed lint errors;
