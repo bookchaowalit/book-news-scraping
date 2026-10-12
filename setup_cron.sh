@@ -16,7 +16,7 @@ CRON_TAG="# book-news-scraping-feeds"
 LOCK_FILE="${PROJECT_DIR}/data/news-feeds.lock"
 LOG_FILE="${PROJECT_DIR}/data/logs/cron.log"
 
-# The collector owns source access, while the solo-data-lake runtime owns the
+# The collector owns source access, while the data-lake runtime owns the
 # lake replay and health gate. Locate it only through SOLO_DATA_LAKE_ROOT.
 LAKE_RUNTIME_ROOT="${SOLO_DATA_LAKE_ROOT:-}"
 CONTROL_PLANE_RUNNER="${LAKE_RUNTIME_ROOT:+${LAKE_RUNTIME_ROOT}/infra/scripts/data_lake/run_news_capture.py}"
@@ -28,11 +28,11 @@ shell_quote() {
 
 require_control_plane() {
     if [ -z "${LAKE_RUNTIME_ROOT}" ] || [ ! -f "${CONTROL_PLANE_RUNNER}" ]; then
-        echo "Set SOLO_DATA_LAKE_ROOT to a solo-data-lake checkout (news control-plane runner not found)" >&2
+        echo "Set SOLO_DATA_LAKE_ROOT to a data-lake checkout (news control-plane runner not found)" >&2
         return 1
     fi
     if [ ! -f "${PYTHON_WRAPPER}" ]; then
-        echo "Cannot find solo-data-lake Python wrapper: ${PYTHON_WRAPPER}" >&2
+        echo "Cannot find data-lake Python wrapper: ${PYTHON_WRAPPER}" >&2
         return 1
     fi
 }
@@ -40,7 +40,7 @@ require_control_plane() {
 require_python_runtime() {
     require_control_plane
     if ! "${PYTHON_WRAPPER}" -c "import duckdb, feedparser, pyarrow" >/dev/null 2>&1; then
-        echo "Refusing cron install: solo-data-lake Python runtime is missing data-lake/feedparser dependencies" >&2
+        echo "Refusing cron install: data-lake Python runtime is missing data-lake/feedparser dependencies" >&2
         return 1
     fi
 }

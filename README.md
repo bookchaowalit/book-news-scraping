@@ -23,7 +23,7 @@ Python
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python3 scripts/run_feeds.py --limit 20
-bash setup_cron.sh plan      # read-only; prints the solo-data-lake runner entry
+bash setup_cron.sh plan      # read-only; prints the data-lake runner entry
 bash setup_cron.sh status
 ```
 
@@ -74,7 +74,7 @@ Installation requires `SOLO_EMPIRE_DATA_LAKE_URI` and refuses a missing or
 non-writable local path. When approved, `bash setup_cron.sh install` runs the
 bounded runner every two hours at minute 15, writes JSON logs, and keeps the
 collector lock shared with the domain boundary. It uses the
-solo-data-lake `infra/scripts/setup/run-python3.sh` runtime (`SOLO_DATA_LAKE_ROOT`) and checks for `duckdb`,
+data-lake `infra/scripts/setup/run-python3.sh` runtime (`SOLO_DATA_LAKE_ROOT`) and checks for `duckdb`,
 `feedparser`, and `pyarrow` before installing. The plan command never edits
 crontab.
 
