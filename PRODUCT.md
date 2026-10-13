@@ -1,6 +1,6 @@
 # book-news-scraping — Product brief
 
-**Slug:** `bookchaowalit/book-news-scraping`  
+**Slug:** `bookchaowalit/content-news-scraper`  
 **Generated:** 2026-08-11 (bulk Book Dev closeout)  
 **Status:** collection adapters plus a Bronze-backed `news.v1` read-only API;
 this repo can schedule RSS feeds via `setup_cron.sh`
@@ -40,7 +40,7 @@ does not call publishers and does not republish article bodies.
 # book-news-scraping
 
 **Tier:** C / tool prototype (portfolio breadth, not interview flagship)  
-**Owner path:** `bookchaowalit/book-apps/tools/book-news-scraping`
+**Owner path:** `bookchaowalit/book-apps/tools/content-news-scraper`
 
 ## Purpose
 

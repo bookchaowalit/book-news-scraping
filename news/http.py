@@ -13,7 +13,7 @@ from typing import Callable
 
 import httpx
 
-USER_AGENT = "book-news-scraping/1.0 (+https://github.com/bookchaowalit/book-news-scraping)"
+USER_AGENT = "book-news-scraping/1.0 (+https://github.com/bookchaowalit/content-news-scraper)"
 RSS_ACCEPT = "application/rss+xml, application/atom+xml, application/xml, text/xml"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_ATTEMPTS = 3
