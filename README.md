@@ -1,7 +1,7 @@
 # book-news-scraping
 
 **Tier:** C / tool prototype (portfolio breadth, not interview flagship)  
-**Owner path:** `bookchaowalit/book-apps/tools/content-news-scraper`
+**Owner path:** `bookchaowalit/book-apps/tools/book-news-scraping`
 
 ## Purpose
 
