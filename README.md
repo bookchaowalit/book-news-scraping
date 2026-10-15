@@ -110,13 +110,17 @@ scheduler class are shared.
 ## Checks (offline)
 
 ```bash
-pip install -r requirements.txt pytest ruff
+pip install -r requirements-dev.txt
 ruff check .
+python -m unittest discover -s tests -v
 python -m pytest -q
 ```
 
 Tests replay fixtures under `tests/fixtures/` and never contact publishers.
-The two `news.v1` store tests need the shared `data_lake` helpers; they skip
+`requirements-dev.txt` installs the shared runtime at an exact commit, and
+`constraints.txt` pins the complete CI dependency set. The workflow asserts
+the shared helpers import before testing, so a missing runtime fails CI.
+The `news.v1` store tests need the shared `data_lake` helpers; they skip
 unless `solo-empire-data-lake` is installed or
 `SOLO_DATA_LAKE_ROOT=/path/to/solo-data-lake` is set. CI
 (`.github/workflows/ci.yml`) runs the same lint and tests.
