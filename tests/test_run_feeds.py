@@ -40,9 +40,7 @@ class RunFeedsTests(unittest.TestCase):
                 return [{"source": "working", "count": 3}]
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            results = asyncio.run(
-                run_feeds(Path(temp_dir), feeds=(("broken", Broken), ("working", Working)))
-            )
+            results = asyncio.run(run_feeds(Path(temp_dir), feeds=(("broken", Broken), ("working", Working))))
         self.assertEqual(results[0], {"source": "broken", "error": "RuntimeError"})
         self.assertEqual(results[1]["count"], 3)
 

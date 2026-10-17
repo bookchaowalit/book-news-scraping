@@ -37,15 +37,10 @@ REFRESH_TOKEN = os.environ.get("REFRESH_TOKEN", "")
 API_HOST = os.environ.get("API_HOST", "127.0.0.1")
 API_PORT = int(os.environ.get("API_PORT", "8108"))
 CORS_ALLOWED_ORIGINS = tuple(
-    origin.strip().rstrip("/")
-    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
-    if origin.strip()
+    origin.strip().rstrip("/") for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()
 )
 STALE_AFTER_HOURS = float(os.environ.get("STALE_AFTER_HOURS", "24"))
-DATA_LAKE_URI = os.environ.get(
-    "SOLO_EMPIRE_DATA_LAKE_URI", os.environ.get("DATA_LAKE_URI", "")
-)
+DATA_LAKE_URI = os.environ.get("SOLO_EMPIRE_DATA_LAKE_URI", os.environ.get("DATA_LAKE_URI", ""))
 SOLO_DATA_LAKE_ROOT = os.environ.get("SOLO_DATA_LAKE_ROOT", "")
 LAKE_READ_MODE = os.environ.get("LAKE_READ_MODE", "parquet").strip().lower()
 LAKE_READ_FALLBACK = os.environ.get("LAKE_READ_FALLBACK", "error").strip().lower()
-

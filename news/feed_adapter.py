@@ -222,7 +222,6 @@ class FeedScraper:
         ]
 
 
-
 def scraper_class(spec: FeedSpec, name: str, module: str) -> type[FeedScraper]:
     """Build a named ``FeedScraper`` subclass for a config-only feed."""
 
