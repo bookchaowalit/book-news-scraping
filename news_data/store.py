@@ -68,14 +68,10 @@ def utc_now_iso() -> str:
 
 
 def make_record_id(row: dict[str, Any]) -> str:
-    return _ps_mod().make_record_id(
-        row, id_fields=config.ID_FIELDS, id_sep=config.ID_SEP
-    )
+    return _ps_mod().make_record_id(row, id_fields=config.ID_FIELDS, id_sep=config.ID_SEP)
 
 
-def news_item_from_bronze(
-    row: dict[str, Any], *, history: bool = False, history_idx: int = 0
-) -> dict[str, Any]:
+def news_item_from_bronze(row: dict[str, Any], *, history: bool = False, history_idx: int = 0) -> dict[str, Any]:
     payload = _ps_mod().parse_payload_json(row)
     event_time = str(row.get("event_time") or payload.get("captured_at") or "")
     item: dict[str, Any] = {}
@@ -107,9 +103,7 @@ def news_item_from_bronze(
 def _history_observation_key(item: dict[str, Any]) -> str:
     """Identify one source observation while ignoring physical lake lineage."""
     physical_fields = {"record_id", "ingest_run_id", "raw_object_key"}
-    payload = {
-        key: value for key, value in item.items() if key not in physical_fields
-    }
+    payload = {key: value for key, value in item.items() if key not in physical_fields}
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
 
 
@@ -170,9 +164,7 @@ def load_history(*, data_lake_uri: Optional[str] = None) -> dict[str, Any]:
 
 
 def get_record(record_id: str, *, data_lake_uri: Optional[str] = None) -> Optional[dict[str, Any]]:
-    return _ps_mod().get_record_from_payload(
-        record_id, load_records(data_lake_uri=data_lake_uri)
-    )
+    return _ps_mod().get_record_from_payload(record_id, load_records(data_lake_uri=data_lake_uri))
 
 
 def paginate(

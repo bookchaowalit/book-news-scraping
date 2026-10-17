@@ -59,9 +59,7 @@ def truncate_text(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     end = limit
-    while end > 0 and (
-        _is_cluster_continuation(text[end]) or text[end - 1] == "\u200d"
-    ):
+    while end > 0 and (_is_cluster_continuation(text[end]) or text[end - 1] == "\u200d"):
         end -= 1
     return text[:end].rstrip()
 
@@ -168,9 +166,7 @@ def write_bytes(raw: bytes, path: Path) -> Path:
     return path
 
 
-def write_snapshot(
-    path: Path, fields: list[str], rows: Iterable[Mapping[str, Any]], captured_at: str
-) -> Path:
+def write_snapshot(path: Path, fields: list[str], rows: Iterable[Mapping[str, Any]], captured_at: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
@@ -180,9 +176,7 @@ def write_snapshot(
     return path
 
 
-def append_history(
-    path: Path, fields: list[str], rows: Iterable[Mapping[str, Any]], captured_at: str
-) -> Path:
+def append_history(path: Path, fields: list[str], rows: Iterable[Mapping[str, Any]], captured_at: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.exists()
     with path.open("a", newline="", encoding="utf-8") as handle:

@@ -36,10 +36,13 @@ class FakeResponse:
 class OptionalFeedTests(unittest.TestCase):
     def test_bangkok_post_tech_uses_bangkok_time_and_drops_invalid_entries(self):
         _, rows = feed_adapter.parse_feed(BANGKOK_POST_TECH, (FIXTURES / "bangkok_post_tech.xml").read_bytes())
-        self.assertEqual([row["url"] for row in rows], [
-            "https://www.bangkokpost.com/tech/1000001/sample-tech-headline-one",
-            "https://www.bangkokpost.com/tech/1000002/sample-tech-headline-two",
-        ])
+        self.assertEqual(
+            [row["url"] for row in rows],
+            [
+                "https://www.bangkokpost.com/tech/1000001/sample-tech-headline-one",
+                "https://www.bangkokpost.com/tech/1000002/sample-tech-headline-two",
+            ],
+        )
         self.assertEqual(rows[0]["published_at"], "2026-08-25T06:45:00Z")
         self.assertEqual(rows[1]["published_at"], "2026-08-25T02:15:00Z")
         self.assertEqual(rows[0]["section"], "technology")
@@ -48,9 +51,7 @@ class OptionalFeedTests(unittest.TestCase):
         self.assertEqual(rows[0]["source_url"], "https://www.bangkokpost.com/rss/data/tech.xml")
 
     def test_wordpress_feeds_keep_author_topics_guid_and_https_on_site_links(self):
-        _, rows = feed_adapter.parse_feed(
-            THAIGER_BUSINESS, (FIXTURES / "wordpress_thaiger_business.xml").read_bytes()
-        )
+        _, rows = feed_adapter.parse_feed(THAIGER_BUSINESS, (FIXTURES / "wordpress_thaiger_business.xml").read_bytes())
         self.assertEqual(len(rows), 2)  # plain-HTTP link dropped
         self.assertEqual(rows[0]["article_id"], "https://thethaiger.com/?p=100001")
         self.assertEqual(rows[0]["author"], "Sample Author")

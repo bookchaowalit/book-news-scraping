@@ -18,9 +18,7 @@ from . import config
 from .store import envelope, get_record, load_history, load_records, paginate, utc_now_iso
 
 
-_LOCAL_ORIGIN_RE = re.compile(
-    r"^https?://(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$", re.I
-)
+_LOCAL_ORIGIN_RE = re.compile(r"^https?://(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$", re.I)
 
 
 def _allowed_cors_origin(origin: str | None) -> str | None:
@@ -178,7 +176,7 @@ class DataProductHandler(BaseHTTPRequestHandler):
             )
 
         if path.startswith("/v1/records/"):
-            record_id = unquote(path[len("/v1/records/"):])
+            record_id = unquote(path[len("/v1/records/") :])
             if not record_id:
                 return _json_response(
                     self,
@@ -294,4 +292,3 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -21,25 +21,25 @@ class NewsDataApiTests(unittest.TestCase):
     @NEEDS_LAKE
     def test_news_item_preserves_attribution_and_normalizes_headline(self) -> None:
         item = store.news_item_from_bronze(
-        {
-            "event_time": "2026-09-08T00:00:00Z",
-            "source_record_id": "Demo Publisher|article-001",
-            "ingest_run_id": "run-001",
-            "raw_object_key": "landing/source=book-news-scraping/batch-001/payload.csv",
-            "payload_json": json.dumps(
-                {
-                    "id": "Demo Publisher|article-001",
-                    "source": "Demo Publisher",
-                    "article_id": "article-001",
-                    "title": "Example headline",
-                    "url": "https://publisher.example/news/article-001",
-                    "source_url": "https://publisher.example/feed",
-                    "captured_at": "2026-09-08T00:00:00Z",
-                    "capture_kind": "rss_article",
-                }
-            ),
-        }
-    )
+            {
+                "event_time": "2026-09-08T00:00:00Z",
+                "source_record_id": "Demo Publisher|article-001",
+                "ingest_run_id": "run-001",
+                "raw_object_key": "landing/source=book-news-scraping/batch-001/payload.csv",
+                "payload_json": json.dumps(
+                    {
+                        "id": "Demo Publisher|article-001",
+                        "source": "Demo Publisher",
+                        "article_id": "article-001",
+                        "title": "Example headline",
+                        "url": "https://publisher.example/news/article-001",
+                        "source_url": "https://publisher.example/feed",
+                        "captured_at": "2026-09-08T00:00:00Z",
+                        "capture_kind": "rss_article",
+                    }
+                ),
+            }
+        )
         self.assertEqual(item["headline"], "Example headline")
         self.assertEqual(item["canonical_url"], "https://publisher.example/news/article-001")
         self.assertEqual(item["publisher"], "Demo Publisher")
